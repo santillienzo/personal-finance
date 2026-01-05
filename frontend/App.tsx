@@ -36,7 +36,8 @@ const App: React.FC = () => {
             <code className="block bg-slate-800 text-green-400 p-2 rounded">
               cd server<br/>
               npm install<br/>
-              npm run dev
+              npm run dev<br/>
+              (Puerto 5000)
             </code>
           </div>
           <button 

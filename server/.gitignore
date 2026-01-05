@@ -1,0 +1,12 @@
+node_modules/
+*.db
+*.log
+.env
+.DS_Store
+
+# Dependencies
+yarn.lock
+package-lock.json
+
+# DB
+financeflow.db

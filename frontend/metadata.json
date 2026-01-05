@@ -1,0 +1,5 @@
+{
+  "name": "FinanzaFlow SQLite",
+  "description": "A robust personal finance manager using an in-browser SQLite database. Tracks income, categorized expenses, and credit card installments.",
+  "requestFramePermissions": []
+}

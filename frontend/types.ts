@@ -1,10 +1,12 @@
 export enum TransactionType {
   INCOME = 'INCOME',
   FIXED_EXPENSE = 'FIXED_EXPENSE', // Subscriptions, gym, etc.
-  MAJOR_EXPENSE = 'MAJOR_EXPENSE', // > 15 USD, categorized
-  MICRO_EXPENSE = 'MICRO_EXPENSE', // Small daily expenses
+  EXPENSE = 'EXPENSE', // General expenses (differentiated by amount in frontend)
   INSTALLMENT = 'INSTALLMENT', // Credit card installment payments
 }
+
+// Threshold for differentiating major vs micro expenses (in USD)
+export const MAJOR_EXPENSE_THRESHOLD_USD = 15;
 
 export const EXPENSE_CATEGORIES = [
   'Alimentos',

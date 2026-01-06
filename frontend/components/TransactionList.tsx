@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { dbService } from '../services/db';
-import { Transaction, TransactionType, EXPENSE_CATEGORIES } from '../types';
-import { Trash2, Tag, ArrowUpCircle, ArrowDownCircle, Filter, ShoppingBag, Coffee } from 'lucide-react';
+import { Transaction, TransactionType, EXPENSE_CATEGORIES, MAJOR_EXPENSE_THRESHOLD_USD } from '../types';
+import { Trash2, Tag, ArrowUpCircle, ArrowDownCircle, Filter, ShoppingBag, Coffee, Repeat } from 'lucide-react';
 
 const TransactionList: React.FC = () => {
   const currentYear = new Date().getFullYear();
@@ -28,10 +28,20 @@ const TransactionList: React.FC = () => {
     }
   };
 
+  // Helper to get amount in USD
+  const getAmountInUSD = (tx: Transaction): number => {
+    if (tx.currency === 'USD') return tx.amount;
+    if (tx.exchange_rate > 0) return tx.amount / tx.exchange_rate;
+    return 0;
+  };
+
   // Sections filtering
   const incomes = transactions.filter(t => t.type === TransactionType.INCOME);
-  const majorExpenses = transactions.filter(t => t.type === TransactionType.MAJOR_EXPENSE || t.type === TransactionType.FIXED_EXPENSE);
-  const microExpenses = transactions.filter(t => t.type === TransactionType.MICRO_EXPENSE);
+  const fixedExpenses = transactions.filter(t => t.type === TransactionType.FIXED_EXPENSE);
+  const expenses = transactions.filter(t => t.type === TransactionType.EXPENSE);
+  const majorExpenses = expenses.filter(t => getAmountInUSD(t) >= MAJOR_EXPENSE_THRESHOLD_USD);
+  const microExpenses = expenses.filter(t => getAmountInUSD(t) < MAJOR_EXPENSE_THRESHOLD_USD);
+  const installmentPayments = transactions.filter(t => t.type === TransactionType.INSTALLMENT);
 
   const renderSection = (title: string, items: Transaction[], icon: React.ReactNode, headerColor: string) => {
       if (items.length === 0) return null;
@@ -167,8 +177,10 @@ const TransactionList: React.FC = () => {
       ) : (
           <div>
             {renderSection("Ingresos", incomes, <ArrowUpCircle className="text-green-600" />, "text-green-800")}
+            {renderSection("Gastos Fijos", fixedExpenses, <Repeat className="text-blue-600" />, "text-blue-800")}
             {renderSection("Gastos Relevantes (> 15 USD)", majorExpenses, <ShoppingBag className="text-pink-600" />, "text-pink-800")}
             {renderSection("Micro Gastos", microExpenses, <Coffee className="text-amber-600" />, "text-amber-800")}
+            {renderSection("Pagos de Cuotas", installmentPayments, <Repeat className="text-purple-600" />, "text-purple-800")}
           </div>
       )}
     </div>

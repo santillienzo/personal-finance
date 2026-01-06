@@ -47,26 +47,9 @@ const TransactionForm: React.FC<Props> = ({ onSuccess, onCancel }) => {
         let finalType = TransactionType.INCOME;
         
         if (isExpense) {
-            // Calculate amount in USD to determine if it's Major or Micro
-            let amountInUSD = numAmount;
-            
-            if (currency === 'ARS') {
-                // If rate is 0 (API fail), we can't convert accurately. 
-                // We'll assume Micro unless it's huge (e.g. > 15000 ARS ~ 15 USD roughly generic fallback)
-                // But strictly using the rate:
-                if (rate > 0) {
-                    amountInUSD = numAmount / rate;
-                } else {
-                    amountInUSD = 0; // Fallback
-                }
-            }
-
-            // Threshold: 15 USD
-            if (amountInUSD >= 15) {
-                finalType = TransactionType.MAJOR_EXPENSE;
-            } else {
-                finalType = TransactionType.MICRO_EXPENSE;
-            }
+            // All expenses are stored as EXPENSE type
+            // The differentiation (major vs micro) is done in frontend based on amount
+            finalType = TransactionType.EXPENSE;
         }
 
         await dbService.addTransaction({

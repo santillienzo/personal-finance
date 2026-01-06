@@ -40,18 +40,16 @@ const Dashboard: React.FC = () => {
     // Only count actual transactions - no projections
     const income = data[TransactionType.INCOME] || 0;
     const fixed = data[TransactionType.FIXED_EXPENSE] || 0;
-    const major = data[TransactionType.MAJOR_EXPENSE] || 0;
-    const micro = data[TransactionType.MICRO_EXPENSE] || 0;
+    const expenses = data[TransactionType.EXPENSE] || 0;
     const installmentPayments = data[TransactionType.INSTALLMENT] || 0;
     
-    const totalExpenses = fixed + major + micro + installmentPayments;
+    const totalExpenses = fixed + expenses + installmentPayments;
     const balance = income - totalExpenses;
 
     setSummary({
       income,
       fixed,
-      major,
-      micro,
+      expenses,
       installmentPayments,
       totalExpenses,
       balance
@@ -137,8 +135,7 @@ const Dashboard: React.FC = () => {
             <h3 className="font-bold text-lg mb-4 text-gray-800">Desglose por Tipo</h3>
             <div className="space-y-4">
                 <BarItem label="Gastos Fijos" amount={summary.fixed} color="bg-blue-500" total={summary.totalExpenses} rate={currentRate} />
-                <BarItem label="Gastos Mayores (>15 USD)" amount={summary.major} color="bg-pink-500" total={summary.totalExpenses} rate={currentRate} />
-                <BarItem label="Micro Gastos" amount={summary.micro} color="bg-yellow-500" total={summary.totalExpenses} rate={currentRate} />
+                <BarItem label="Gastos" amount={summary.expenses} color="bg-pink-500" total={summary.totalExpenses} rate={currentRate} />
                 <BarItem label="Cuotas Pagadas" amount={summary.installmentPayments} color="bg-purple-500" total={summary.totalExpenses} rate={currentRate} />
             </div>
         </div>

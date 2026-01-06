@@ -84,6 +84,19 @@ class DatabaseServerService {
   async getExpensesByCategoryUSD(year: number, month?: string): Promise<Array<{category: string, total: number}>> {
     return apiService.getExpensesByCategoryUSD(year, month);
   }
+
+  // Fixed Expenses (FIXED_EXPENSE transactions)
+  async getFixedExpensesForMonth(year: number, month: number): Promise<Transaction[]> {
+    return apiService.getFixedExpensesForMonth(year, month);
+  }
+
+  async updateFixedExpense(id: number, updates: Partial<Transaction>) {
+    return apiService.updateFixedExpense(id, updates);
+  }
+
+  async replicateFixedExpenses(year: number, month: number, exchange_rate: number) {
+    return apiService.replicateFixedExpenses(year, month, exchange_rate);
+  }
 }
 
 export const dbService = new DatabaseServerService();

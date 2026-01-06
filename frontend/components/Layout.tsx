@@ -1,9 +1,9 @@
 import React from 'react';
-import { Wallet, CreditCard, PieChart, PlusCircle } from 'lucide-react';
+import { Wallet, CreditCard, PieChart, PlusCircle, Repeat } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
-  activeTab: 'dashboard' | 'transactions' | 'installments' | 'add';
+  activeTab: 'dashboard' | 'transactions' | 'installments' | 'fixed' | 'add';
   onTabChange: (tab: any) => void;
 }
 
@@ -44,6 +44,12 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
             icon={<CreditCard size={20} />} 
             label="Cuotas Tarjeta" 
           />
+          <NavButton 
+            active={activeTab === 'fixed'} 
+            onClick={() => onTabChange('fixed')} 
+            icon={<Repeat size={20} />} 
+            label="Gastos Fijos" 
+          />
           <div className="pt-4 mt-4 border-t border-slate-800">
              <button
                 onClick={() => onTabChange('add')}
@@ -67,6 +73,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
         <MobileNavButton active={activeTab === 'transactions'} onClick={() => onTabChange('transactions')} icon={<Wallet size={20} />} />
         <MobileNavButton active={activeTab === 'add'} onClick={() => onTabChange('add')} icon={<PlusCircle size={24} className="text-indigo-600" />} />
         <MobileNavButton active={activeTab === 'installments'} onClick={() => onTabChange('installments')} icon={<CreditCard size={20} />} />
+        <MobileNavButton active={activeTab === 'fixed'} onClick={() => onTabChange('fixed')} icon={<Repeat size={20} />} />
       </div>
     </div>
   );

@@ -114,6 +114,25 @@ class ApiService {
   async checkHealth(): Promise<{ status: string; message: string }> {
     return this.request('/health');
   }
+
+  // Fixed Expenses (FIXED_EXPENSE transactions)
+  async getFixedExpensesForMonth(year: number, month: number): Promise<Transaction[]> {
+    return this.request(`/fixed-expenses/month/${year}/${month}`);
+  }
+
+  async updateFixedExpense(id: number, updates: Partial<Transaction>): Promise<{ message: string }> {
+    return this.request(`/fixed-expenses/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    });
+  }
+
+  async replicateFixedExpenses(year: number, month: number, exchange_rate: number): Promise<{ message: string; count: number }> {
+    return this.request('/fixed-expenses/replicate', {
+      method: 'POST',
+      body: JSON.stringify({ year, month, exchange_rate }),
+    });
+  }
 }
 
 export const apiService = new ApiService();

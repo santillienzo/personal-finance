@@ -67,6 +67,12 @@ const createTables = () => {
         // Column already exists, ignore
       }
     });
+    // Migration: Convert MAJOR_EXPENSE and MICRO_EXPENSE to EXPENSE
+    db.run("UPDATE transactions SET type = 'EXPENSE' WHERE type IN ('MAJOR_EXPENSE', 'MICRO_EXPENSE')", (err) => {
+      if (err) {
+        console.error('Migration error (EXPENSE):', err);
+      }
+    });
   });
 };
 

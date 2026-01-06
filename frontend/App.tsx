@@ -4,10 +4,11 @@ import Dashboard from './components/Dashboard';
 import TransactionForm from './components/TransactionForm';
 import TransactionList from './components/TransactionList';
 import InstallmentList from './components/InstallmentList';
+import FixedExpensesList from './components/FixedExpensesList';
 import { dbService } from './services/db';
 
 const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'installments' | 'add'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'installments' | 'fixed' | 'add'>('dashboard');
   const [dbReady, setDbReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -71,6 +72,7 @@ const App: React.FC = () => {
       {activeTab === 'dashboard' && <Dashboard />}
       {activeTab === 'transactions' && <TransactionList />}
       {activeTab === 'installments' && <InstallmentList />}
+      {activeTab === 'fixed' && <FixedExpensesList />}
       {activeTab === 'add' && (
         <TransactionForm 
             onSuccess={handleTransactionSuccess} 

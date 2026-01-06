@@ -48,6 +48,14 @@ class DatabaseServerService {
     await apiService.deleteInstallment(id);
   }
 
+  async markInstallmentPaid(id: number, exchange_rate: number, payment_date?: string, installment_number?: number) {
+    return apiService.markInstallmentPaid(id, exchange_rate, payment_date, installment_number);
+  }
+
+  async getInstallmentPayments(id: number) {
+    return apiService.getInstallmentPayments(id);
+  }
+
   async getMonthlySummary(year: number, month?: string): Promise<Record<string, number>> {
     const summary = await apiService.getMonthlySummary(year, month);
     
@@ -63,8 +71,18 @@ class DatabaseServerService {
     return summary;
   }
 
+  async getMonthlySummaryUSD(year: number, currentRate: number, month?: string): Promise<Record<string, number>> {
+    // Only return actual transactions - no projections
+    // INSTALLMENT type transactions are already included in the summary from the API
+    return apiService.getMonthlySummaryUSD(year, month);
+  }
+
   async getExpensesByCategory(year: number, month?: string): Promise<Array<{category: string, total: number}>> {
     return apiService.getExpensesByCategory(year, month);
+  }
+
+  async getExpensesByCategoryUSD(year: number, month?: string): Promise<Array<{category: string, total: number}>> {
+    return apiService.getExpensesByCategoryUSD(year, month);
   }
 }
 

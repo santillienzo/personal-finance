@@ -39,13 +39,34 @@ const createTables = () => {
       total_installments INTEGER NOT NULL,
       installments_paid INTEGER NOT NULL,
       start_date TEXT NOT NULL,
-      is_active INTEGER DEFAULT 1
+      is_active INTEGER DEFAULT 1,
+      currency TEXT DEFAULT 'ARS'
+    )
+  `;
+
+  const installmentPaymentsTable = `
+    CREATE TABLE IF NOT EXISTS installment_payments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      installment_id INTEGER NOT NULL,
+      transaction_id INTEGER NOT NULL,
+      installment_number INTEGER NOT NULL,
+      payment_date TEXT NOT NULL,
+      created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+      FOREIGN KEY (installment_id) REFERENCES installments(id) ON DELETE CASCADE,
+      FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE
     )
   `;
 
   db.serialize(() => {
     db.run(transactionsTable);
     db.run(installmentsTable);
+    db.run(installmentPaymentsTable);
+    // Migration: Add currency column if it doesn't exist
+    db.run("ALTER TABLE installments ADD COLUMN currency TEXT DEFAULT 'ARS'", (err) => {
+      if (err && !err.message.includes('duplicate column')) {
+        // Column already exists, ignore
+      }
+    });
   });
 };
 

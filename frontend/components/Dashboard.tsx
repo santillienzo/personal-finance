@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { dbService } from '../services/db';
+import { getHistoricalRate } from '../services/currency';
 import { TransactionType } from '../types';
 import { TrendingUp, TrendingDown, DollarSign, Calendar, PieChart } from 'lucide-react';
 
@@ -9,26 +10,41 @@ const Dashboard: React.FC = () => {
 
   const [summary, setSummary] = useState<any>(null);
   const [categoryBreakdown, setCategoryBreakdown] = useState<Array<{category: string, total: number}>>([]);
+  const [currentRate, setCurrentRate] = useState<number>(0);
   
   // Filters
   const [year, setYear] = useState(currentYear);
   const [month, setMonth] = useState(currentMonth); // "all" or "01"-"12"
 
   const loadData = async () => {
+    // Fetch exchange rate for the first day of the selected month/year
+    let rateDate: string;
+    if (month === 'all') {
+      // For full year, use first day of January
+      rateDate = `${year}-01-01`;
+    } else {
+      // Use first day of selected month
+      rateDate = `${year}-${month}-01`;
+    }
+    const rate = await getHistoricalRate(rateDate);
+    setCurrentRate(rate);
+
     // Determine month param: if 'all', pass 'all', else pass specific month string
     const monthParam = month === 'all' ? 'all' : month;
 
-    const data = await dbService.getMonthlySummary(year, monthParam);
-    const breakdown = await dbService.getExpensesByCategory(year, monthParam);
+    // Get USD-normalized data
+    const data = await dbService.getMonthlySummaryUSD(year, rate, monthParam);
+    const breakdown = await dbService.getExpensesByCategoryUSD(year, monthParam);
 
-    // Calculate Balance
+    // Calculate Balance (all in USD)
+    // Only count actual transactions - no projections
     const income = data[TransactionType.INCOME] || 0;
     const fixed = data[TransactionType.FIXED_EXPENSE] || 0;
     const major = data[TransactionType.MAJOR_EXPENSE] || 0;
     const micro = data[TransactionType.MICRO_EXPENSE] || 0;
-    const installments = data['INSTALLMENTS'] || 0;
+    const installmentPayments = data[TransactionType.INSTALLMENT] || 0;
     
-    const totalExpenses = fixed + major + micro + installments;
+    const totalExpenses = fixed + major + micro + installmentPayments;
     const balance = income - totalExpenses;
 
     setSummary({
@@ -36,7 +52,7 @@ const Dashboard: React.FC = () => {
       fixed,
       major,
       micro,
-      installments,
+      installmentPayments,
       totalExpenses,
       balance
     });
@@ -90,24 +106,28 @@ const Dashboard: React.FC = () => {
             amount={summary.income} 
             icon={<TrendingUp className="text-green-500" />} 
             bg="bg-green-50"
+            rate={currentRate}
         />
         <StatCard 
             label="Balance" 
             amount={summary.balance} 
             icon={<DollarSign className={summary.balance >= 0 ? "text-indigo-500" : "text-red-500"} />} 
             bg={summary.balance >= 0 ? "bg-indigo-50" : "bg-red-50"}
+            rate={currentRate}
         />
         <StatCard 
             label="Total Gastos" 
             amount={summary.totalExpenses} 
             icon={<TrendingDown className="text-orange-500" />} 
             bg="bg-orange-50"
+            rate={currentRate}
         />
         <StatCard 
-            label={month === 'all' ? "Cuotas (Proy. Anual)" : "Cuotas (Mes)"}
-            amount={summary.installments} 
+            label="Cuotas Pagadas"
+            amount={summary.installmentPayments} 
             icon={<Calendar className="text-purple-500" />} 
             bg="bg-purple-50"
+            rate={currentRate}
         />
       </div>
 
@@ -116,10 +136,10 @@ const Dashboard: React.FC = () => {
         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
             <h3 className="font-bold text-lg mb-4 text-gray-800">Desglose por Tipo</h3>
             <div className="space-y-4">
-                <BarItem label="Gastos Fijos" amount={summary.fixed} color="bg-blue-500" total={summary.totalExpenses} />
-                <BarItem label="Gastos Mayores (>15 USD)" amount={summary.major} color="bg-pink-500" total={summary.totalExpenses} />
-                <BarItem label="Micro Gastos" amount={summary.micro} color="bg-yellow-500" total={summary.totalExpenses} />
-                <BarItem label="Cuotas de Tarjeta" amount={summary.installments} color="bg-purple-500" total={summary.totalExpenses} />
+                <BarItem label="Gastos Fijos" amount={summary.fixed} color="bg-blue-500" total={summary.totalExpenses} rate={currentRate} />
+                <BarItem label="Gastos Mayores (>15 USD)" amount={summary.major} color="bg-pink-500" total={summary.totalExpenses} rate={currentRate} />
+                <BarItem label="Micro Gastos" amount={summary.micro} color="bg-yellow-500" total={summary.totalExpenses} rate={currentRate} />
+                <BarItem label="Cuotas Pagadas" amount={summary.installmentPayments} color="bg-purple-500" total={summary.totalExpenses} rate={currentRate} />
             </div>
         </div>
 
@@ -148,7 +168,12 @@ const Dashboard: React.FC = () => {
                             <div key={item.category}>
                                 <div className="flex justify-between text-xs mb-1">
                                     <span className="font-medium text-gray-700">{item.category}</span>
-                                    <span className="text-gray-900 font-bold">${item.total.toLocaleString()}</span>
+                                    <div className="text-right">
+                                        <span className="text-gray-900 font-bold">${item.total.toFixed(2)} USD</span>
+                                        {currentRate > 0 && (
+                                            <span className="text-gray-400 block">≈ ${(item.total * currentRate).toLocaleString(undefined, { maximumFractionDigits: 0 })} ARS</span>
+                                        )}
+                                    </div>
                                 </div>
                                 <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
                                     <div 
@@ -167,23 +192,35 @@ const Dashboard: React.FC = () => {
   );
 };
 
-const StatCard = ({ label, amount, icon, bg }: any) => (
-  <div className={`p-4 rounded-xl border border-gray-100 flex items-center gap-4 ${bg}`}>
-    <div className="p-3 bg-white rounded-lg shadow-sm">{icon}</div>
-    <div>
-      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</p>
-      <p className="text-xl font-bold text-gray-900">${amount.toLocaleString()}</p>
+const StatCard = ({ label, amount, icon, bg, rate }: any) => {
+  const arsAmount = rate > 0 ? amount * rate : 0;
+  return (
+    <div className={`p-4 rounded-xl border border-gray-100 flex items-center gap-4 ${bg}`}>
+      <div className="p-3 bg-white rounded-lg shadow-sm">{icon}</div>
+      <div>
+        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</p>
+        <p className="text-xl font-bold text-gray-900">${amount.toFixed(2)} USD</p>
+        {rate > 0 && (
+          <p className="text-xs text-gray-400">≈ ${arsAmount.toLocaleString(undefined, { maximumFractionDigits: 0 })} ARS</p>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
-const BarItem = ({ label, amount, color, total }: any) => {
+const BarItem = ({ label, amount, color, total, rate }: any) => {
     const percent = total > 0 ? (amount / total) * 100 : 0;
+    const arsAmount = rate > 0 ? amount * rate : 0;
     return (
         <div>
             <div className="flex justify-between text-sm mb-1">
                 <span className="text-gray-600">{label}</span>
-                <span className="font-medium">${amount.toLocaleString()} ({Math.round(percent)}%)</span>
+                <div className="text-right">
+                    <span className="font-medium">${amount.toFixed(2)} USD ({Math.round(percent)}%)</span>
+                    {rate > 0 && (
+                        <span className="text-xs text-gray-400 block">≈ ${arsAmount.toLocaleString(undefined, { maximumFractionDigits: 0 })} ARS</span>
+                    )}
+                </div>
             </div>
             <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                 <div className={`h-full ${color}`} style={{ width: `${percent}%` }}></div>

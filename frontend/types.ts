@@ -3,6 +3,7 @@ export enum TransactionType {
   FIXED_EXPENSE = 'FIXED_EXPENSE', // Subscriptions, gym, etc.
   MAJOR_EXPENSE = 'MAJOR_EXPENSE', // > 15 USD, categorized
   MICRO_EXPENSE = 'MICRO_EXPENSE', // Small daily expenses
+  INSTALLMENT = 'INSTALLMENT', // Credit card installment payments
 }
 
 export const EXPENSE_CATEGORIES = [
@@ -42,6 +43,7 @@ export interface Installment {
   installments_paid: number;
   start_date: string;
   is_active: number; // 1 for active, 0 for paid/cancelled
+  currency: Currency;
 }
 
 export interface SqlJsDatabase {

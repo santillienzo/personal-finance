@@ -1,20 +1,111 @@
 import React, { useEffect, useState } from 'react';
 import { dbService } from '../services/db';
-import { Installment } from '../types';
-import { CreditCard, CheckCircle2, Circle, Plus, Minus, Calendar, Trash2 } from 'lucide-react';
+import { Installment, Currency } from '../types';
+import { getHistoricalRate } from '../services/currency';
+import { CreditCard, CheckCircle2, Circle, Plus, Minus, Calendar, Trash2, DollarSign, Loader2 } from 'lucide-react';
+
+interface PaymentForm {
+  installmentId: number;
+  date: string;
+  installmentNumber: number;
+  exchangeRate: number;
+  loadingRate: boolean;
+}
 
 const InstallmentList: React.FC = () => {
   const [activeOnly, setActiveOnly] = useState(true);
   const [items, setItems] = useState<Installment[]>([]);
+  const [loadingPayment, setLoadingPayment] = useState<number | null>(null);
+  const [currentRate, setCurrentRate] = useState<number>(0);
+  const [paymentForm, setPaymentForm] = useState<PaymentForm | null>(null);
+  const [paidInstallments, setPaidInstallments] = useState<Record<number, number[]>>({});
 
   const load = async () => {
     const data = await dbService.getInstallments(activeOnly);
     setItems(data);
+    
+    // Load paid installments for each item
+    const paidMap: Record<number, number[]> = {};
+    for (const item of data) {
+      try {
+        const payments = await dbService.getInstallmentPayments(item.id);
+        paidMap[item.id] = payments.map(p => p.installment_number);
+      } catch {
+        paidMap[item.id] = [];
+      }
+    }
+    setPaidInstallments(paidMap);
   };
 
   useEffect(() => {
     load();
+    fetchCurrentRate();
   }, [activeOnly]);
+
+  const fetchCurrentRate = async () => {
+    const today = new Date().toISOString().split('T')[0];
+    const rate = await getHistoricalRate(today);
+    setCurrentRate(rate);
+  };
+
+  const openPaymentForm = async (item: Installment) => {
+    // Find next unpaid installment number
+    const paid = paidInstallments[item.id] || [];
+    let nextNumber = 1;
+    for (let i = 1; i <= item.total_installments; i++) {
+      if (!paid.includes(i)) {
+        nextNumber = i;
+        break;
+      }
+    }
+    
+    const today = new Date().toISOString().split('T')[0];
+    setPaymentForm({
+      installmentId: item.id,
+      date: today,
+      installmentNumber: nextNumber,
+      exchangeRate: currentRate,
+      loadingRate: false
+    });
+  };
+
+  const handleDateChange = async (newDate: string) => {
+    if (!paymentForm) return;
+    
+    setPaymentForm({ ...paymentForm, date: newDate, loadingRate: true });
+    
+    try {
+      const rate = await getHistoricalRate(newDate);
+      setPaymentForm(prev => prev ? { ...prev, exchangeRate: rate, loadingRate: false } : null);
+    } catch (error) {
+      console.error('Error fetching rate for date:', error);
+      setPaymentForm(prev => prev ? { ...prev, exchangeRate: currentRate, loadingRate: false } : null);
+    }
+  };
+
+  const handleConfirmPayment = async () => {
+    if (!paymentForm || loadingPayment || paymentForm.loadingRate) return;
+    
+    const item = items.find(i => i.id === paymentForm.installmentId);
+    if (!item) return;
+
+    setLoadingPayment(paymentForm.installmentId);
+    try {
+      await dbService.markInstallmentPaid(
+        paymentForm.installmentId, 
+        paymentForm.exchangeRate,
+        paymentForm.date,
+        paymentForm.installmentNumber
+      );
+      setPaymentForm(null);
+      await load();
+    } catch (error: any) {
+      console.error('Error marking as paid:', error);
+      alert(error.message || 'Error al registrar el pago');
+    } finally {
+      setLoadingPayment(null);
+    }
+  };
 
   const handleUpdatePaid = async (id: number, current: number, delta: number, total: number) => {
     const newCount = current + delta;
@@ -97,7 +188,22 @@ const InstallmentList: React.FC = () => {
                         <span>{item.start_date}</span>
                     </div>
 
-                    <p className="text-2xl font-bold text-slate-800 mb-4">${item.amount_per_installment.toLocaleString()} <span className="text-xs font-normal text-gray-400">/ mes</span></p>
+                    <div className="mb-4">
+                        <p className="text-2xl font-bold text-slate-800">
+                            ${item.amount_per_installment.toLocaleString()} {item.currency || 'ARS'}
+                            <span className="text-xs font-normal text-gray-400"> / mes</span>
+                        </p>
+                        {item.currency === 'ARS' && currentRate > 0 && (
+                            <p className="text-xs text-gray-400">
+                                ≈ ${(item.amount_per_installment / currentRate).toFixed(2)} USD
+                            </p>
+                        )}
+                        {item.currency === 'USD' && currentRate > 0 && (
+                            <p className="text-xs text-gray-400">
+                                ≈ ${(item.amount_per_installment * currentRate).toLocaleString(undefined, { maximumFractionDigits: 0 })} ARS
+                            </p>
+                        )}
+                    </div>
 
                     {/* Progress Bar */}
                     <div className="space-y-2 mb-4">
@@ -112,23 +218,78 @@ const InstallmentList: React.FC = () => {
 
                     {/* Controls */}
                     {item.is_active === 1 && (
-                        <div className="flex items-center justify-between border-t border-gray-100 pt-3 mt-3">
-                            <span className="text-xs text-gray-400">Ajustar pagadas:</span>
-                            <div className="flex items-center gap-3">
-                                <button 
-                                    onClick={() => handleUpdatePaid(item.id, item.installments_paid, -1, item.total_installments)}
-                                    className="p-1 hover:bg-gray-100 rounded-full text-gray-600"
+                        <div className="border-t border-gray-100 pt-3 mt-3 space-y-3">
+                            {paymentForm && paymentForm.installmentId === item.id ? (
+                                <div className="bg-gray-50 p-3 rounded-lg space-y-3">
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label className="block text-xs text-gray-500 mb-1">Fecha de pago</label>
+                                            <input
+                                                type="date"
+                                                value={paymentForm.date}
+                                                onChange={(e) => handleDateChange(e.target.value)}
+                                                className="w-full p-2 text-sm border border-gray-200 rounded-lg"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs text-gray-500 mb-1">Cuota Nro</label>
+                                            <select
+                                                value={paymentForm.installmentNumber}
+                                                onChange={(e) => setPaymentForm({...paymentForm, installmentNumber: Number(e.target.value)})}
+                                                className="w-full p-2 text-sm border border-gray-200 rounded-lg"
+                                            >
+                                                {Array.from({length: item.total_installments}, (_, i) => i + 1).map(num => {
+                                                    const isPaid = (paidInstallments[item.id] || []).includes(num);
+                                                    return (
+                                                        <option key={num} value={num} disabled={isPaid}>
+                                                            {num} {isPaid ? '(pagada)' : ''}
+                                                        </option>
+                                                    );
+                                                })}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div className="text-xs text-gray-500 flex items-center gap-2">
+                                        {paymentForm.loadingRate ? (
+                                            <>
+                                                <Loader2 size={12} className="animate-spin" />
+                                                Cargando tipo de cambio...
+                                            </>
+                                        ) : (
+                                            <>Tipo de cambio ({paymentForm.date}): <span className="font-medium">${paymentForm.exchangeRate.toLocaleString()} ARS/USD</span></>
+                                        )}
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={handleConfirmPayment}
+                                            disabled={loadingPayment === item.id}
+                                            className="flex-1 py-2 px-3 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white text-sm font-medium rounded-lg flex items-center justify-center gap-2"
+                                        >
+                                            {loadingPayment === item.id ? (
+                                                <Loader2 size={16} className="animate-spin" />
+                                            ) : (
+                                                <DollarSign size={16} />
+                                            )}
+                                            Confirmar Pago
+                                        </button>
+                                        <button
+                                            onClick={() => setPaymentForm(null)}
+                                            className="py-2 px-3 bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm font-medium rounded-lg"
+                                        >
+                                            Cancelar
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <button
+                                    onClick={() => openPaymentForm(item)}
+                                    disabled={item.installments_paid >= item.total_installments}
+                                    className="w-full py-2 px-3 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white text-sm font-medium rounded-lg flex items-center justify-center gap-2 transition-colors"
                                 >
-                                    <Minus size={16} />
+                                    <DollarSign size={16} />
+                                    Registrar Pago de Cuota
                                 </button>
-                                <span className="font-mono font-medium text-gray-800 w-4 text-center">{item.installments_paid}</span>
-                                <button 
-                                    onClick={() => handleUpdatePaid(item.id, item.installments_paid, 1, item.total_installments)}
-                                    className="p-1 hover:bg-gray-100 rounded-full text-gray-600"
-                                >
-                                    <Plus size={16} />
-                                </button>
-                            </div>
+                            )}
                         </div>
                     )}
                 </div>

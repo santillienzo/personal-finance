@@ -55,6 +55,20 @@ class ApiService {
     return this.request(`/transactions/expenses-by-category?${params.toString()}`);
   }
 
+  async getMonthlySummaryUSD(year: number, month?: string): Promise<Record<string, number>> {
+    const params = new URLSearchParams({ year: String(year) });
+    if (month) params.append('month', month);
+
+    return this.request(`/transactions/summary-usd?${params.toString()}`);
+  }
+
+  async getExpensesByCategoryUSD(year: number, month?: string): Promise<Array<{ category: string; total: number }>> {
+    const params = new URLSearchParams({ year: String(year) });
+    if (month) params.append('month', month);
+
+    return this.request(`/transactions/expenses-by-category-usd?${params.toString()}`);
+  }
+
   async addInstallment(inst: Omit<Installment, 'id'>): Promise<{ id: number; message: string }> {
     return this.request('/installments', {
       method: 'POST',
@@ -84,6 +98,17 @@ class ApiService {
     return this.request(`/installments/${id}`, {
       method: 'DELETE',
     });
+  }
+
+  async markInstallmentPaid(id: number, exchange_rate: number, payment_date?: string, installment_number?: number): Promise<{ message: string; transaction_id: number; payment_number: number; new_paid_count: number; is_complete: boolean }> {
+    return this.request(`/installments/${id}/mark-paid`, {
+      method: 'POST',
+      body: JSON.stringify({ exchange_rate, payment_date, installment_number }),
+    });
+  }
+
+  async getInstallmentPayments(id: number): Promise<Array<{ id: number; installment_id: number; transaction_id: number; installment_number: number; payment_date: string; amount: number; currency: string; exchange_rate: number }>> {
+    return this.request(`/installments/${id}/payments`);
   }
 
   async checkHealth(): Promise<{ status: string; message: string }> {

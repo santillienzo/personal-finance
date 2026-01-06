@@ -144,4 +144,95 @@ router.get('/expenses-by-category', (req, res) => {
   });
 });
 
+// Get summary normalized to USD
+router.get('/summary-usd', (req, res) => {
+  const { year, month } = req.query;
+
+  if (!year) {
+    return res.status(400).json({ error: 'Year parameter is required' });
+  }
+
+  let query = `SELECT type, amount, currency, exchange_rate FROM transactions WHERE strftime('%Y', date) = ?`;
+  const params = [year];
+
+  if (month && month !== 'all') {
+    query += ` AND strftime('%m', date) = ?`;
+    params.push(month);
+  }
+
+  db.all(query, params, (err, rows) => {
+    if (err) {
+      console.error('Error fetching summary:', err);
+      return res.status(500).json({ error: 'Failed to fetch summary' });
+    }
+
+    const summary = {};
+    (rows || []).forEach(row => {
+      // Convert to USD
+      let amountUSD = row.amount;
+      if (row.currency === 'ARS' && row.exchange_rate > 0) {
+        amountUSD = row.amount / row.exchange_rate;
+      }
+      // If USD, amount is already in USD
+      
+      if (!summary[row.type]) {
+        summary[row.type] = 0;
+      }
+      summary[row.type] += amountUSD;
+    });
+
+    res.json(summary);
+  });
+});
+
+// Get expenses by category normalized to USD
+router.get('/expenses-by-category-usd', (req, res) => {
+  const { year, month } = req.query;
+
+  if (!year) {
+    return res.status(400).json({ error: 'Year parameter is required' });
+  }
+
+  let query = `
+    SELECT category, amount, currency, exchange_rate 
+    FROM transactions 
+    WHERE type != 'INCOME' 
+    AND strftime('%Y', date) = ?
+  `;
+  const params = [year];
+
+  if (month && month !== 'all') {
+    query += ` AND strftime('%m', date) = ?`;
+    params.push(month);
+  }
+
+  db.all(query, params, (err, rows) => {
+    if (err) {
+      console.error('Error fetching expenses by category:', err);
+      return res.status(500).json({ error: 'Failed to fetch expenses by category' });
+    }
+
+    const categoryTotals = {};
+    (rows || []).forEach(row => {
+      // Convert to USD
+      let amountUSD = row.amount;
+      if (row.currency === 'ARS' && row.exchange_rate > 0) {
+        amountUSD = row.amount / row.exchange_rate;
+      }
+      
+      if (!categoryTotals[row.category]) {
+        categoryTotals[row.category] = 0;
+      }
+      categoryTotals[row.category] += amountUSD;
+    });
+
+    // Convert to array and sort
+    const results = Object.entries(categoryTotals)
+      .map(([category, total]) => ({ category, total }))
+      .sort((a, b) => b.total - a.total);
+
+    res.json(results);
+  });
+});
+
 export default router;

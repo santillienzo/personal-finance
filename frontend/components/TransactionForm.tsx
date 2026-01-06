@@ -26,6 +26,7 @@ const TransactionForm: React.FC<Props> = ({ onSuccess, onCancel }) => {
   const [totalInstallments, setTotalInstallments] = useState(3);
   const [amountPerInstallment, setAmountPerInstallment] = useState('');
   const [installmentsPaid, setInstallmentsPaid] = useState(0);
+  const [installmentCurrency, setInstallmentCurrency] = useState<Currency>('ARS');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,7 +86,8 @@ const TransactionForm: React.FC<Props> = ({ onSuccess, onCancel }) => {
             total_installments: Number(totalInstallments),
             installments_paid: Number(installmentsPaid),
             start_date: date,
-            is_active: 1
+            is_active: 1,
+            currency: installmentCurrency
         });
     }
 
@@ -235,15 +237,25 @@ const TransactionForm: React.FC<Props> = ({ onSuccess, onCancel }) => {
                 <div className="grid grid-cols-2 gap-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Monto por Cuota</label>
-                        <input 
-                            required
-                            type="number"
-                            step="0.01"
-                            value={amountPerInstallment}
-                            onChange={(e) => setAmountPerInstallment(e.target.value)}
-                            className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
-                            placeholder="0.00"
-                        />
+                        <div className="flex">
+                            <input 
+                                required
+                                type="number"
+                                step="0.01"
+                                value={amountPerInstallment}
+                                onChange={(e) => setAmountPerInstallment(e.target.value)}
+                                className="w-full p-3 border border-gray-200 rounded-l-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
+                                placeholder="0.00"
+                            />
+                            <select
+                                value={installmentCurrency}
+                                onChange={(e) => setInstallmentCurrency(e.target.value as Currency)}
+                                className="bg-gray-50 border-y border-r border-gray-200 rounded-r-xl px-3 text-sm font-bold text-gray-700 outline-none hover:bg-gray-100 cursor-pointer"
+                            >
+                                <option value="ARS">ARS</option>
+                                <option value="USD">USD</option>
+                            </select>
+                        </div>
                     </div>
                      <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Total Cuotas</label>

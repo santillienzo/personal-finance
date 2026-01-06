@@ -43,17 +43,44 @@ const TransactionList: React.FC = () => {
   const microExpenses = expenses.filter(t => getAmountInUSD(t) < MAJOR_EXPENSE_THRESHOLD_USD);
   const installmentPayments = transactions.filter(t => t.type === TransactionType.INSTALLMENT);
 
+  // Calculate section totals
+  const getSectionTotals = (items: Transaction[]) => {
+    let totalUSD = 0;
+    let totalARS = 0;
+    
+    items.forEach(tx => {
+      const rate = tx.exchange_rate || 0;
+      if (tx.currency === 'USD') {
+        totalUSD += tx.amount;
+        if (rate > 0) totalARS += tx.amount * rate;
+      } else {
+        totalARS += tx.amount;
+        if (rate > 0) totalUSD += tx.amount / rate;
+      }
+    });
+    
+    return { totalUSD, totalARS };
+  };
+
   const renderSection = (title: string, items: Transaction[], icon: React.ReactNode, headerColor: string) => {
       if (items.length === 0) return null;
 
+      const { totalUSD, totalARS } = getSectionTotals(items);
+
       return (
         <div className="mb-8">
-            <div className={`flex items-center gap-2 mb-3 px-1 ${headerColor}`}>
-                {icon}
-                <h3 className="font-bold text-lg">{title}</h3>
-                <span className="text-xs font-normal text-gray-500 bg-white px-2 py-0.5 rounded-full border border-gray-200">
-                    {items.length}
-                </span>
+            <div className={`flex items-center justify-between mb-3 px-1`}>
+                <div className={`flex items-center gap-2 ${headerColor}`}>
+                    {icon}
+                    <h3 className="font-bold text-lg">{title}</h3>
+                    <span className="text-xs font-normal text-gray-500 bg-white px-2 py-0.5 rounded-full border border-gray-200">
+                        {items.length}
+                    </span>
+                </div>
+                <div className="text-right">
+                    <span className="font-bold text-gray-800">${totalUSD.toFixed(2)} USD</span>
+                    <span className="text-xs text-gray-400 ml-2">≈ ${totalARS.toLocaleString(undefined, { maximumFractionDigits: 0 })} ARS</span>
+                </div>
             </div>
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden divide-y divide-gray-100">
                 {items.map((tx) => (

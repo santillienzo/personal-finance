@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { dbService } from '../services/db';
 import { Transaction, TransactionType, EXPENSE_CATEGORIES, MAJOR_EXPENSE_THRESHOLD_USD } from '../types';
-import { Trash2, Tag, ArrowUpCircle, ArrowDownCircle, Filter, ShoppingBag, Coffee, Repeat } from 'lucide-react';
+import { Trash2, Tag, ArrowUpCircle, ArrowDownCircle, Filter, ShoppingBag, Coffee, Repeat, PiggyBank } from 'lucide-react';
 
 const TransactionList: React.FC = () => {
   const currentYear = new Date().getFullYear();
@@ -42,6 +42,8 @@ const TransactionList: React.FC = () => {
   const majorExpenses = expenses.filter(t => getAmountInUSD(t) >= MAJOR_EXPENSE_THRESHOLD_USD);
   const microExpenses = expenses.filter(t => getAmountInUSD(t) < MAJOR_EXPENSE_THRESHOLD_USD);
   const installmentPayments = transactions.filter(t => t.type === TransactionType.INSTALLMENT);
+  const savingDeposits = transactions.filter(t => t.type === TransactionType.SAVING_DEPOSIT);
+  const savingWithdrawals = transactions.filter(t => t.type === TransactionType.SAVING_WITHDRAWAL);
 
   // Calculate section totals
   const getSectionTotals = (items: Transaction[]) => {
@@ -208,6 +210,8 @@ const TransactionList: React.FC = () => {
             {renderSection("Gastos Relevantes (> 15 USD)", majorExpenses, <ShoppingBag className="text-pink-600" />, "text-pink-800")}
             {renderSection("Micro Gastos", microExpenses, <Coffee className="text-amber-600" />, "text-amber-800")}
             {renderSection("Pagos de Cuotas", installmentPayments, <Repeat className="text-purple-600" />, "text-purple-800")}
+            {renderSection("Ahorros (Depósitos)", savingDeposits, <PiggyBank className="text-emerald-600" />, "text-emerald-800")}
+            {renderSection("Ahorros (Retiros)", savingWithdrawals, <PiggyBank className="text-orange-600" />, "text-orange-800")}
           </div>
       )}
     </div>

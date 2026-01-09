@@ -1,4 +1,4 @@
-import { Transaction, Installment } from '../types';
+import { Transaction, Installment, SavingsAccount, SavingsMovement, Portfolio, AvailableBalance, SavingsAccountType } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -132,6 +132,64 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify({ year, month, exchange_rate }),
     });
+  }
+
+  // ============== SAVINGS ==============
+
+  // Accounts
+  async getSavingsAccounts(): Promise<SavingsAccount[]> {
+    return this.request('/savings/accounts');
+  }
+
+  async createSavingsAccount(account: { name: string; type: SavingsAccountType; currency?: string; icon?: string; color?: string }): Promise<{ id: number; message: string }> {
+    return this.request('/savings/accounts', {
+      method: 'POST',
+      body: JSON.stringify(account),
+    });
+  }
+
+  async updateSavingsAccount(id: number, updates: Partial<SavingsAccount>): Promise<{ message: string }> {
+    return this.request(`/savings/accounts/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    });
+  }
+
+  async deleteSavingsAccount(id: number): Promise<{ message: string }> {
+    return this.request(`/savings/accounts/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Movements
+  async getSavingsMovements(accountId?: number, limit?: number): Promise<SavingsMovement[]> {
+    const params = new URLSearchParams();
+    if (accountId) params.append('account_id', String(accountId));
+    if (limit) params.append('limit', String(limit));
+    const queryString = params.toString();
+    return this.request(`/savings/movements${queryString ? '?' + queryString : ''}`);
+  }
+
+  async createSavingsMovement(movement: Omit<SavingsMovement, 'id' | 'created_at' | 'account_name' | 'account_color'>): Promise<{ id: number; message: string }> {
+    return this.request('/savings/movements', {
+      method: 'POST',
+      body: JSON.stringify(movement),
+    });
+  }
+
+  async deleteSavingsMovement(id: number): Promise<{ message: string }> {
+    return this.request(`/savings/movements/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Portfolio & Available
+  async getPortfolio(): Promise<Portfolio> {
+    return this.request('/savings/portfolio');
+  }
+
+  async getAvailableBalance(): Promise<AvailableBalance> {
+    return this.request('/savings/available');
   }
 }
 

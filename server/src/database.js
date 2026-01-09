@@ -57,10 +57,42 @@ const createTables = () => {
     )
   `;
 
+  // Savings accounts: where you store money (USD Físicos, Binance, Banco, etc.)
+  const savingsAccountsTable = `
+    CREATE TABLE IF NOT EXISTS savings_accounts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL,
+      currency TEXT DEFAULT 'USD',
+      icon TEXT,
+      color TEXT,
+      is_active INTEGER DEFAULT 1,
+      created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000)
+    )
+  `;
+
+  // Savings movements: deposits and withdrawals
+  const savingsMovementsTable = `
+    CREATE TABLE IF NOT EXISTS savings_movements (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      account_id INTEGER NOT NULL,
+      type TEXT NOT NULL,
+      amount REAL NOT NULL,
+      currency TEXT NOT NULL,
+      exchange_rate REAL DEFAULT 0,
+      description TEXT,
+      date TEXT NOT NULL,
+      created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+      FOREIGN KEY (account_id) REFERENCES savings_accounts(id) ON DELETE CASCADE
+    )
+  `;
+
   db.serialize(() => {
     db.run(transactionsTable);
     db.run(installmentsTable);
     db.run(installmentPaymentsTable);
+    db.run(savingsAccountsTable);
+    db.run(savingsMovementsTable);
     // Migration: Add currency column if it doesn't exist
     db.run("ALTER TABLE installments ADD COLUMN currency TEXT DEFAULT 'ARS'", (err) => {
       if (err && !err.message.includes('duplicate column')) {

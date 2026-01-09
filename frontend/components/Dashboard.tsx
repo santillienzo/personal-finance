@@ -42,15 +42,20 @@ const Dashboard: React.FC = () => {
     const fixed = data[TransactionType.FIXED_EXPENSE] || 0;
     const expenses = data[TransactionType.EXPENSE] || 0;
     const installmentPayments = data[TransactionType.INSTALLMENT] || 0;
+    const savingDeposits = data[TransactionType.SAVING_DEPOSIT] || 0;
+    const savingWithdrawals = data[TransactionType.SAVING_WITHDRAWAL] || 0;
     
-    const totalExpenses = fixed + expenses + installmentPayments;
-    const balance = income - totalExpenses;
+    // Saving deposits reduce available balance, withdrawals increase it
+    const totalExpenses = fixed + expenses + installmentPayments + savingDeposits;
+    const balance = income - totalExpenses + savingWithdrawals;
 
     setSummary({
       income,
       fixed,
       expenses,
       installmentPayments,
+      savingDeposits,
+      savingWithdrawals,
       totalExpenses,
       balance
     });
@@ -137,6 +142,7 @@ const Dashboard: React.FC = () => {
                 <BarItem label="Gastos Fijos" amount={summary.fixed} color="bg-blue-500" total={summary.totalExpenses} rate={currentRate} />
                 <BarItem label="Gastos" amount={summary.expenses} color="bg-pink-500" total={summary.totalExpenses} rate={currentRate} />
                 <BarItem label="Cuotas Pagadas" amount={summary.installmentPayments} color="bg-purple-500" total={summary.totalExpenses} rate={currentRate} />
+                <BarItem label="Ahorros" amount={summary.savingDeposits} color="bg-emerald-500" total={summary.totalExpenses} rate={currentRate} />
             </div>
         </div>
 

@@ -3,6 +3,8 @@ export enum TransactionType {
   FIXED_EXPENSE = 'FIXED_EXPENSE', // Subscriptions, gym, etc.
   EXPENSE = 'EXPENSE', // General expenses (differentiated by amount in frontend)
   INSTALLMENT = 'INSTALLMENT', // Credit card installment payments
+  SAVING_DEPOSIT = 'SAVING_DEPOSIT', // Money moved to savings (reduces available balance)
+  SAVING_WITHDRAWAL = 'SAVING_WITHDRAWAL', // Money taken from savings (increases available balance)
 }
 
 // Threshold for differentiating major vs micro expenses (in USD)
@@ -46,6 +48,49 @@ export interface Installment {
   start_date: string;
   is_active: number; // 1 for active, 0 for paid/cancelled
   currency: Currency;
+}
+
+// Savings System
+export type SavingsAccountType = 'cash' | 'crypto' | 'bank' | 'investment' | 'other';
+export type SavingsMovementType = 'DEPOSIT' | 'WITHDRAWAL';
+
+export interface SavingsAccount {
+  id: number;
+  name: string;
+  type: SavingsAccountType;
+  currency: Currency;
+  icon: string;
+  color: string;
+  is_active: number;
+  created_at?: number;
+  balance?: number; // Calculated field from portfolio endpoint
+}
+
+export interface SavingsMovement {
+  id: number;
+  account_id: number;
+  type: SavingsMovementType;
+  amount: number;
+  currency: Currency;
+  exchange_rate: number;
+  description: string;
+  date: string;
+  created_at?: number;
+  account_name?: string;
+  account_color?: string;
+}
+
+export interface Portfolio {
+  accounts: SavingsAccount[];
+  totalUSD: number;
+}
+
+export interface AvailableBalance {
+  income: number;
+  expenses: number;
+  netBalance: number;
+  allocated: number;
+  available: number;
 }
 
 export interface SqlJsDatabase {
